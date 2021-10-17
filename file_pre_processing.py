@@ -1,7 +1,7 @@
 import av
 import numpy as np
 import matplotlib.pyplot as plt
-from PIL import Image as pilimage
+from PIL import Image
 from skimage import io
 import os 
 import cv2
@@ -14,6 +14,7 @@ import moviepy.editor as mp
 #		The goal of this file is to convert the image or movie into matrices.
 #		This is all done in this file to keep this step outside the main code. 
 #		This may require some changes to accomodate different file types
+#       Currently support file type: tif, tiff, avi, 
 ##########################################################################################
 ##########################################################################################
 def file_pre_processing(file_name,extension='avi'):
@@ -53,46 +54,25 @@ def file_pre_processing(file_name,extension='avi'):
 		plt.savefig(folder_output + '/sample_image.png')
 
 ##########################################################################################
-def file_pre_processing_tif(file_name):
-	folder_name = 'ALL_MOVIES_MATRICES'
-	if not os.path.exists(folder_name):
-		os.makedirs(folder_name)	
+def file_pre_processing_tif(path2file, file_name, file_format, video, rgb):
+	folder_output = create_output_folder(file_name)
 	
-	folder_output = folder_name + '/' + file_name + '_matrices'
-	if not os.path.exists(folder_output):
-		os.makedirs(folder_output)
+	if file_format in ['tif', 'tiff']:
+		with Image.open(path2file + file_name + '.' + file_format) as im:
+			imarray = np.array(im)
 	
-	im = io.imread('ALL_MOVIES_RAW/' + file_name + '/' + file_name + '.tif')
-	
-	for kk in range(0,im.shape[0]):
-		frame_npy = 0.2989 * im[kk,:,:,0] + 0.5870 * im[kk,:,:,1] +  0.1140 * im[kk,:,:,2]
-		np.save(folder_output + '/frame-%04d' % (kk), frame_npy)
-	
-	plt.figure()
-	plt.imshow(frame_npy)
-	plt.axis('off')
-	plt.title(file_name)
-	plt.savefig(folder_output + '/sample_image.png')
-	
-	
-##########################################################################################
-def file_pre_processing_tif2(file_name):
-	folder_name = 'ALL_MOVIES_MATRICES'
-	if not os.path.exists(folder_name):
-		os.makedirs(folder_name)	
-	
-	folder_output = folder_name + '/' + file_name + '_matrices'
-	if not os.path.exists(folder_output):
-		os.makedirs(folder_output)
-	
-	im = io.imread('ALL_MOVIES_RAW/' + file_name + '/' + file_name + '.tif')
-	
-	for kk in range(0,im.shape[0]):
-		frame_npy = im[kk,:,:]
-		np.save(folder_output + '/frame-%04d' % (kk), frame_npy)
+	if not video:
+		imarray = imarray.reshape(1,*imarray.shape)
+	for frame_num in range(imarray.shape[0]):
+		if rgb:
+			frame = 0.2989 * imarray[frame_num,:,:,0] + \
+						0.5870 * imarray[frame_num,:,:,1] +  0.1140 * imarray[frame_num,:,:,2]
+		else:
+			frame = imarray[frame_num,:,:]
+		np.savetxt(folder_output + '/frame-%04d' % (frame_num) + '.txt', frame, fmt='%.5e')
 	
 	plt.figure()
-	plt.imshow(frame_npy)
+	plt.imshow(frame)
 	plt.axis('off')
 	plt.title(file_name)
 	plt.savefig(folder_output + '/sample_image.png')
@@ -156,28 +136,6 @@ def file_pre_processing_Kehan_timelapse(file_name, file_source, channel):
 	plt.savefig(folder_output + '/sample_image.png')
 	
 ##########################################################################################
-def file_pre_processing_template(file_name):
-	folder_name = 'ALL_MOVIES_MATRICES'
-	if not os.path.exists(folder_name):
-		os.makedirs(folder_name)
-	
-	folder_output = folder_name + '/' + file_name + '_matrices'
-	if not os.path.exists(folder_output):
-		os.makedirs(folder_output)
-	
-	# im = read the movie in
-	
-	# for kk in range(0,num_movie_frames):
-	# 	frame_npy = one image frame
-	# 	np.save(folder_output + '/frame-%04d' % (kk), frame_npy)
-	
-	plt.figure()
-	plt.imshow(frame_npy)
-	plt.axis('off')
-	plt.title(file_name)
-	plt.savefig(folder_output + '/sample_image.png')
-	
-##########################################################################################
 def get_frame_matrix(folder_name, frame):
 	"""Get the npy matrix for a frame of the movie."""
 	if frame < 10: file_root = '_matrices/frame-000%i'%(frame)
@@ -215,4 +173,14 @@ def make_movie_from_npy(file_name,include_eps=False):
 	
 	return
 	
+##########################################################################################
+def create_output_folder(file_name):
+	folder_name = 'ALL_MOVIES_MATRICES'
+	if not os.path.exists(folder_name):
+		os.makedirs(folder_name)	
+	
+	folder_output = folder_name + '/' + file_name + '_matrices'
+	if not os.path.exists(folder_output):
+		os.makedirs(folder_output)
 
+	return folder_output
